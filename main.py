@@ -8,6 +8,7 @@ import utils
 import TD3
 import OurDDPG
 import DDPG
+import pybullet_envs
 
 
 # Runs policy for X episodes and returns average reward
@@ -33,7 +34,7 @@ def eval_policy(policy, env_name, seed, eval_episodes=10):
 
 
 if __name__ == "__main__":
-	
+
 	parser = argparse.ArgumentParser()
 	parser.add_argument("--policy", default="TD3")                  # Policy name (TD3, DDPG or OurDDPG)
 	parser.add_argument("--env", default="HalfCheetah-v2")          # OpenAI gym environment name
@@ -67,12 +68,12 @@ if __name__ == "__main__":
 
 	# Set seeds
 	env.seed(args.seed)
-	env.action_space.seed(seed)
+	# env.action_space.seed(seed)
 	torch.manual_seed(args.seed)
 	np.random.seed(args.seed)
-	
+
 	state_dim = env.observation_space.shape[0]
-	action_dim = env.action_space.shape[0] 
+	action_dim = env.action_space.shape[0]
 	max_action = float(env.action_space.high[0])
 
 	kwargs = {
@@ -100,7 +101,7 @@ if __name__ == "__main__":
 		policy.load(f"./models/{policy_file}")
 
 	replay_buffer = utils.ReplayBuffer(state_dim, action_dim)
-	
+
 	# Evaluate untrained policy
 	evaluations = [eval_policy(policy, args.env, args.seed)]
 
@@ -110,7 +111,7 @@ if __name__ == "__main__":
 	episode_num = 0
 
 	for t in range(int(args.max_timesteps)):
-		
+
 		episode_timesteps += 1
 
 		# Select action randomly or according to policy
@@ -123,7 +124,7 @@ if __name__ == "__main__":
 			).clip(-max_action, max_action)
 
 		# Perform action
-		next_state, reward, done, _ = env.step(action) 
+		next_state, reward, done, _ = env.step(action)
 		done_bool = float(done) if episode_timesteps < env._max_episode_steps else 0
 
 		# Store data in replay buffer
@@ -136,14 +137,14 @@ if __name__ == "__main__":
 		if t >= args.start_timesteps:
 			policy.train(replay_buffer, args.batch_size)
 
-		if done: 
+		if done:
 			# +1 to account for 0 indexing. +0 on ep_timesteps since it will increment +1 even if done=True
 			print(f"Total T: {t+1} Episode Num: {episode_num+1} Episode T: {episode_timesteps} Reward: {episode_reward:.3f}")
 			# Reset environment
 			state, done = env.reset(), False
 			episode_reward = 0
 			episode_timesteps = 0
-			episode_num += 1 
+			episode_num += 1
 
 		# Evaluate episode
 		if (t + 1) % args.eval_freq == 0:
